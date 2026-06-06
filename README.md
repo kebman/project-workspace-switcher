@@ -159,3 +159,7 @@ alias oldrepog='pg web'
 This tool does not create Git worktrees. It only helps you switch between paths you have already configured.
 
 Create worktrees with Git first, then add their paths to your config.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
