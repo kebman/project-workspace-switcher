@@ -106,6 +106,14 @@ docs/design.md
 
 Examples use placeholders such as `my-app`, `my-api`, `feature-a` and `~/projects/my-app`. They should not contain real private project names, repository names or paths.
 
+## Validation
+
+Run the repo-local smoke test:
+
+```bash
+tools/smoke-test.sh
+```
+
 ## Install
 
 Source the engine from `~/.zshrc`:

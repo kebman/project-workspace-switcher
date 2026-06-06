@@ -64,3 +64,7 @@ typeset -gA PWS_PATHS=(
 ## Public-Safe Examples
 
 Examples must avoid real private project names, real repository names, personal usernames and concrete private paths. Use neutral placeholders such as `my-app`, `my-api`, `my-web`, `my-docs`, `feature-a`, `bugfix-b`, `~/projects/my-app` and `~/projects/worktrees/my-app-feature-a`.
+
+## Smoke Test
+
+The repo-local smoke test validates engine syntax, example config syntax and basic workspace selection behaviour. It does not validate real filesystem path existence, because example paths are placeholders by design.
