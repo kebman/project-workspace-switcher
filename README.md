@@ -93,7 +93,18 @@ See:
 
 ```text
 examples/three-repo-workspaces.config.zsh
+examples/single-repo-worktrees.config.zsh
+docs/design.md
 ```
+
+## Examples
+
+- Multi-repo workspace example: `examples/three-repo-workspaces.config.zsh`
+- Single-repo worktree example: `examples/single-repo-worktrees.config.zsh`
+
+## Public-safe examples
+
+Examples use placeholders such as `my-app`, `my-api`, `feature-a` and `~/projects/my-app`. They should not contain real private project names, repository names or paths.
 
 ## Install
 
@@ -140,4 +151,3 @@ alias oldrepog='pg web'
 This tool does not create Git worktrees. It only helps you switch between paths you have already configured.
 
 Create worktrees with Git first, then add their paths to your config.
-
