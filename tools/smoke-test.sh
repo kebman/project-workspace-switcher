@@ -95,6 +95,8 @@ source "$PWS_REPO_ROOT/zsh/project-workspace-switcher.zsh" || exit 1
 help_output="$(pws help)" || exit 1
 for expected in \
   "pws pick         interactively select workspace with fzf" \
+  "pws add <workspace> [label]" \
+  "pws path set <workspace> <repo> <path>" \
   "pcd pick         interactively cd to repo/path with fzf" \
   "pg pick          interactively cd + git status with fzf"; do
   if [[ "$help_output" != *"$expected"* ]]; then
@@ -134,6 +136,80 @@ EOF
   trap - RETURN
 }
 
+run_registry_smoke() {
+  local tmp_dir
+  local config_file
+
+  section "Smoke test: registry commands"
+
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$tmp_dir"' RETURN
+  config_file="$tmp_dir/config.zsh"
+
+  mkdir -p "$tmp_dir/main/api" "$tmp_dir/feature-b/api"
+
+  {
+    printf 'typeset -g PWS_DEFAULT_WORKSPACE="main"\n'
+    printf 'typeset -ga PWS_WORKSPACES=(main)\n'
+    printf 'typeset -ga PWS_REPOS=(api)\n'
+    printf 'typeset -gA PWS_WORKSPACE_LABELS=([main]="Main checkout")\n'
+    printf 'typeset -gA PWS_REPO_LABELS=([api]="API / backend")\n'
+    printf 'typeset -gA PWS_PATHS=([main:api]="%s/main/api")\n' "$tmp_dir"
+  } >"$config_file"
+
+  PWS_CONFIG_FILE="$config_file" PWS_TMP_DIR="$tmp_dir" PWS_REPO_ROOT="$REPO_ROOT" zsh -f <<'EOF'
+source "$PWS_REPO_ROOT/zsh/project-workspace-switcher.zsh" || exit 1
+
+pws add feature-b "Feature B worktree" >/dev/null || exit 1
+
+if [[ "$(<"$PWS_CONFIG_FILE")" != *"# BEGIN PWS MANAGED REGISTRY"* ]]; then
+  print -u2 -- "Managed registry block was not written."
+  exit 1
+fi
+
+pws path set feature-b api "$PWS_TMP_DIR/feature-b/api" >/dev/null || exit 1
+pws feature-b >/dev/null || exit 1
+
+current_output="$(pws)" || exit 1
+if [[ "$current_output" != *"$PWS_TMP_DIR/feature-b/api"* ]]; then
+  print -u2 -- "Expected registry path not found in pws output."
+  print -u2 -- "$current_output"
+  exit 1
+fi
+
+pws path rm feature-b api >/dev/null || exit 1
+current_output="$(pws)" || exit 1
+if [[ "$current_output" == *"$PWS_TMP_DIR/feature-b/api"* ]]; then
+  print -u2 -- "Removed registry path still appears in pws output."
+  exit 1
+fi
+
+if pws rm feature-b >/dev/null 2>&1; then
+  print -u2 -- "Removing the active workspace unexpectedly succeeded."
+  exit 1
+fi
+
+pws main >/dev/null || exit 1
+pws rm feature-b >/dev/null || exit 1
+
+list_output="$(pws ls)" || exit 1
+if [[ "$list_output" == *"feature-b"* ]]; then
+  print -u2 -- "Removed workspace still appears in pws ls."
+  print -u2 -- "$list_output"
+  exit 1
+fi
+
+if pws add "bad:name" >/dev/null 2>&1; then
+  print -u2 -- "Invalid workspace name unexpectedly succeeded."
+  exit 1
+fi
+EOF
+
+  rm -rf "$tmp_dir"
+  printf 'Registry command checks passed.\n'
+  trap - RETURN
+}
+
 main() {
   cd "$REPO_ROOT"
 
@@ -142,6 +218,7 @@ main() {
   run_workspace_smoke "multi-repo workspace example" "$THREE_REPO_CONFIG" "feature-a"
   run_workspace_smoke "single-repo worktree example" "$SINGLE_REPO_CONFIG" "bugfix-b"
   run_command_smoke
+  run_registry_smoke
 
   section "Result"
   printf 'Smoke tests passed.\n'
