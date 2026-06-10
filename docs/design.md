@@ -27,6 +27,10 @@ Workspace selection is per terminal session. When `pws feature-a` runs, it updat
 
 This is useful when separate terminals need to stay attached to different task contexts at the same time.
 
+## Optional Picker
+
+Interactive picker commands use `fzf` when it is available, but the core engine remains non-interactive and scriptable. `pws pick`, `pcd pick` and `pg pick` improve terminal ergonomics without making `fzf` a required dependency.
+
 ## Git Worktrees
 
 This tool does not create Git worktrees. Git already owns worktree creation, removal and metadata. Project Workspace Switcher only switches between paths that already exist and are listed in config.

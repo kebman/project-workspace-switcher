@@ -54,6 +54,25 @@ Show Git status for all configured repo/path slots in the active workspace:
 pag
 ```
 
+## Interactive picking
+
+If `fzf` is installed, you can select workspaces and repo/path slots interactively:
+
+```bash
+pws pick
+pcd pick
+pg pick
+```
+
+`fzf` is optional. Without it, use the normal commands:
+
+```bash
+pws ls
+pws feature-a
+pcd web
+pg web
+```
+
 ## Configuration
 
 The default config path is:
