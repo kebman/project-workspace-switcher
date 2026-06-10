@@ -5,8 +5,11 @@
 # Core commands:
 #   pws             show active workspace
 #   pws ls          list configured workspaces
+#   pws pick        interactively select workspace with fzf
 #   pws <name>      select workspace
+#   pcd pick        interactively cd to repo/path with fzf
 #   pcd <repo>      cd to repo/path in active workspace
+#   pg pick         interactively cd to repo/path + git status with fzf
 #   pg <repo>       cd to repo/path + git status
 #   pag             git status for all repos/paths in active workspace
 #
@@ -17,6 +20,7 @@
 typeset -g PWS_CONFIG_FILE="${PWS_CONFIG_FILE:-$HOME/.config/project-workspace-switcher/config.zsh}"
 typeset -g PWS_DEFAULT_WORKSPACE="${PWS_DEFAULT_WORKSPACE:-main}"
 typeset -g PWS_ACTIVE="${PWS_ACTIVE:-$PWS_DEFAULT_WORKSPACE}"
+typeset -g PWS_FZF_BIN="${PWS_FZF_BIN:-fzf}"
 
 typeset -ga PWS_WORKSPACES
 typeset -ga PWS_REPOS
@@ -64,6 +68,13 @@ _pws_workspace_exists() {
 
 _pws_repo_exists() {
   _pws_has_item "$1" "${PWS_REPOS[@]}"
+}
+
+_pws_require_fzf() {
+  if [[ -z "$PWS_FZF_BIN" ]] || ! command -v -- "$PWS_FZF_BIN" >/dev/null 2>&1; then
+    print -u2 -- "fzf is not installed. Install fzf or use pws ls / pws <workspace> / pcd <repo>."
+    return 1
+  fi
 }
 
 _pws_workspace_label() {
@@ -125,6 +136,48 @@ _pws_print_list() {
   print -r -- "Active workspace: $PWS_ACTIVE"
 }
 
+_pws_pick_workspace() {
+  _pws_require_fzf || return 1
+
+  local workspace selection
+
+  selection=$(
+    for workspace in "${PWS_WORKSPACES[@]}"; do
+      print -r -- "${workspace}	$(_pws_workspace_label "$workspace")"
+    done | command "$PWS_FZF_BIN"
+  ) || return 1
+
+  [[ -n "$selection" ]] || return 1
+
+  workspace="${selection%%	*}"
+  pws "$workspace"
+}
+
+_pws_pick_repo() {
+  local action="$1"
+
+  if ! _pws_workspace_exists "$PWS_ACTIVE"; then
+    print -u2 -- "Active workspace is not configured: $PWS_ACTIVE"
+    return 1
+  fi
+
+  _pws_require_fzf || return 1
+
+  local repo repo_dir selection
+
+  selection=$(
+    for repo in "${PWS_REPOS[@]}"; do
+      repo_dir=$(_pws_repo_dir "$PWS_ACTIVE" "$repo")
+      print -r -- "${repo}	$(_pws_repo_label "$repo")	${repo_dir}"
+    done | command "$PWS_FZF_BIN"
+  ) || return 1
+
+  [[ -n "$selection" ]] || return 1
+
+  repo="${selection%%	*}"
+  "$action" "$repo"
+}
+
 pws() {
   _pws_load_config
   _pws_require_config || return 1
@@ -139,12 +192,19 @@ pws() {
       _pws_print_list
       return
       ;;
+    pick)
+      _pws_pick_workspace
+      return
+      ;;
     help|--help|-h)
       print -r -- "Usage:"
       print -r -- "  pws              show active workspace"
       print -r -- "  pws ls           list configured workspaces"
+      print -r -- "  pws pick         interactively select workspace with fzf"
       print -r -- "  pws <workspace>  select workspace"
+      print -r -- "  pcd pick         interactively cd to repo/path with fzf"
       print -r -- "  pcd <repo>       cd to repo/path in active workspace"
+      print -r -- "  pg pick          interactively cd + git status with fzf"
       print -r -- "  pg <repo>        cd to repo/path + git status"
       print -r -- "  pag              git status for all repos/paths in active workspace"
       return
@@ -171,6 +231,11 @@ pcd() {
   if [[ -z "$repo" ]]; then
     print -u2 -- "Usage: pcd <repo>"
     return 1
+  fi
+
+  if [[ "$repo" == "pick" ]]; then
+    _pws_pick_repo pcd
+    return
   fi
 
   if ! _pws_workspace_exists "$PWS_ACTIVE"; then
@@ -206,6 +271,13 @@ pg() {
   if [[ -z "$repo" ]]; then
     print -u2 -- "Usage: pg <repo>"
     return 1
+  fi
+
+  if [[ "$repo" == "pick" ]]; then
+    _pws_load_config
+    _pws_require_config || return 1
+    _pws_pick_repo pg
+    return
   fi
 
   pcd "$repo" || return 1
